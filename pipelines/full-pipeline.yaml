@@ -1,0 +1,38 @@
+job:
+  id: "143-engine-full-run"
+  goal: >
+    Run the 143 Engine end-to-end: ingest Mister Rogers videos from
+    YouTube, score them on kindness and virality, generate distribution
+    manifest, and schedule cross-platform posts.
+
+inputs:
+  - "YouTube Data API key (env: YOUTUBE_API_KEY)"
+  - "DeepSeek API key (env: DEEPSEEK_API_KEY)"
+
+expected_outputs:
+  - "data/processed/distribution_manifest.json"
+  - "data/processed/publishing_schedule.json"
+
+stages:
+  - id: ingest
+    kind: workspace_run
+    spec:
+      job:
+        id: "143-ingest"
+        goal: "Fetch all videos from @MisterRogersNeighborhood YouTube channel"
+
+  - id: score
+    kind: workspace_run
+    needs: [ingest]
+    spec:
+      job:
+        id: "143-score"
+        goal: "Score all videos on kindness and virality via LLM"
+
+  - id: distribute
+    kind: workspace_run
+    needs: [score]
+    spec:
+      job:
+        id: "143-distribute"
+        goal: "Generate 14-day publishing schedule for YouTube Shorts and TikTok"
