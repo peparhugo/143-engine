@@ -1,0 +1,13 @@
+{
+  "channels": [
+    {
+      "id": "UCQr37RLNViAkEwli9WiaUug",
+      "handle": "@MisterRogersNeighborhood",
+      "name": "Mister Rogers' Neighborhood",
+      "uploads_playlist": "UUQr37RLNViAkEwli9WiaUug",
+      "enabled": true,
+      "categories": ["kindness", "children", "education", "empathy"],
+      "notes": "Official channel, launched March 2026. 30 videos, ~45K subscribers."
+    }
+  ]
+}

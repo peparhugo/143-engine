@@ -1,0 +1,53 @@
+{
+  "name": "143-engine-analysis",
+  "description": "Analyze scored Mister Rogers videos: filter high-kindness content, rank, generate distribution manifest.",
+  "steps": [
+    {
+      "type": "read_json",
+      "config": {
+        "path": "data/scored/MisterRogersNeighborhood.json",
+        "jq_path": "videos"
+      }
+    },
+    {
+      "type": "filter",
+      "config": {
+        "field": "scores.kindness_score",
+        "op": "gte",
+        "value": 6
+      }
+    },
+    {
+      "type": "filter",
+      "config": {
+        "field": "scores.safe_for_brand",
+        "op": "eq",
+        "value": true
+      }
+    },
+    {
+      "type": "transform",
+      "config": {
+        "name": "simplify_for_manifest",
+        "template": {
+          "video_id": "{video_id}",
+          "title": "{title}",
+          "kindness_score": "{scores.kindness_score}",
+          "virality_score": "{scores.virality_potential}",
+          "caption": "{scores.caption_hook}",
+          "platform": "{scores.target_platform}",
+          "emotional_tone": "{scores.emotional_tone}",
+          "themes": "{scores.thematic_tags}",
+          "views": "{view_count}",
+          "likes": "{like_count}"
+        }
+      }
+    },
+    {
+      "type": "write_json",
+      "config": {
+        "path": "data/processed/kindness_manifest.json"
+      }
+    }
+  ]
+}
