@@ -1,0 +1,7 @@
+# 143 Engine dependencies
+dreamlab
+
+# External tools (orchestrated, not bundled)
+# yt-dlp
+# igedits
+# kadenzo-mcp
