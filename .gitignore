@@ -7,3 +7,4 @@ dist/
 .dreamlab/
 data/
 experiments/
+.credentials/

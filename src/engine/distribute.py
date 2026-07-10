@@ -156,17 +156,19 @@ def post_to_platform(post: dict, dry_run: bool = True) -> dict:
 
 
 def _post_youtube_short(post: dict) -> dict:
-    api_key = __import__("os").environ.get("YOUTUBE_API_KEY", "")
-    if not api_key:
-        post["status"] = "failed"
-        post["error"] = "YOUTUBE_API_KEY not set"
-        return post
+    try:
+        from src.engine.youtube_auth import post_short_from_manifest, verify_auth
 
-    # YouTube video upload requires OAuth 2.0, not just API key.
-    # For now, fall back to dry-run with a note.
-    # TODO: implement OAuth flow via google-auth-oauthlib
+        auth = verify_auth()
+        if auth.get("configured"):
+            result = post_short_from_manifest(post)
+            if result.get("status") == "posted":
+                return result
+    except ImportError:
+        pass
+
     post["status"] = "dry_run"
-    post["error"] = "YouTube upload requires OAuth (not yet configured)"
+    post["error"] = "YouTube upload requires OAuth (not authenticated) or video clip not available"
     return post
 
 
