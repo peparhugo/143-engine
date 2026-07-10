@@ -69,9 +69,19 @@ def score_video(video: dict, adapter: str = "deepseek", model: str = "") -> dict
         }
     )
 
+    parsed = result.get("structured_output") or {}
+    if parsed:
+        video["scores"] = parsed
+        return video
+
+    raw = result.get("output", "").strip()
     try:
-        parsed = json.loads(result.get("output", "{}"))
-    except json.JSONDecodeError:
+        if "```json" in raw:
+            raw = raw.split("```json", 1)[-1].rsplit("```", 1)[0]
+        elif raw.startswith("```"):
+            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0]
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
         log.warning("Failed to parse scoring output for %s: %s", video["video_id"], result.get("output", "")[:200])
         parsed = {
             "kindness_score": 0,
