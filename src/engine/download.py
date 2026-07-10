@@ -25,19 +25,23 @@ def download_clip(video_id: str, output_dir: Path | None = None) -> Path | None:
     out_dir.mkdir(parents=True, exist_ok=True)
     output_template = str(out_dir / f"{video_id}.%(ext)s")
 
+    deno_bin = Path.home() / ".deno" / "bin"
+    env = dict(os.environ)
+    env["PATH"] = f"{deno_bin}:{env.get('PATH', '')}"
+
     cmd = [
         sys.executable, "-m", "yt_dlp",
+        "--cookies", str(Path.home() / ".config" / "yt-dlp" / "cookies.txt"),
         "--no-playlist",
         "--format", "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
         "--merge-output-format", "mp4",
         "--output", output_template,
         "--quiet",
-        "--no-warnings",
         url,
     ]
 
     try:
-        subprocess.run(cmd, check=True, timeout=300)
+        subprocess.run(cmd, check=True, timeout=300, env=env)
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
         log.warning("Download failed for %s: %s", video_id, e)
         return None
