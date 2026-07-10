@@ -173,7 +173,7 @@ def build_caption_filter(words: list[dict]) -> str:
         return (
             f"drawtext=textfile='{tf}':fontfile={FONT_PATH}:fontsize=52:"
             f"fontcolor=white:bordercolor=black:borderw=3:"
-            f"x=(w-text_w)/2:y=h-text_h-120:"
+            f"x=(w-text_w)/2:y=h-text_h-300:"
             f"enable='between(t,{start:.2f},{start + duration:.2f})'"
         )
 
@@ -207,7 +207,7 @@ def overlay_final(clip_path: str, captions: list[dict], commentary: str, output_
         f"{cf},"
         f"drawtext=textfile='{cm_file}':fontfile={FONT_PATH_REGULAR}:fontsize=26:"
         f"fontcolor=white:line_spacing=8:box=1:boxcolor=black@0.6:boxborderw=15:"
-        f"x=(w-text_w)/2:y=80:"
+        f"x=(w-text_w)/2:y=160:"
         f"enable='between(t,0.5,8)'"
         f"[vout]"
     )
