@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""YouTube OAuth — one-shot device-less flow.
+
+Usage:
+    bin/auth-youtube url              # Print the auth URL
+    bin/auth-youtube token <code>     # Exchange code for token
+    bin/auth-youtube status           # Check auth status
+"""
+
+import json
+import os
+import sys
+from pathlib import Path
+from urllib.parse import urlparse, parse_qs
+
+PROJECT = Path(__file__).resolve().parent.parent
+CREDS = PROJECT / ".credentials"
+TOKEN = CREDS / "youtube_token.json"
+CLIENT_ID = os.environ.get("YOUTUBE_CLIENT_ID", "")
+CLIENT_SECRET = os.environ.get("YOUTUBE_CLIENT_SECRET", "")
+
+
+def cmd_url() -> None:
+    from google_auth_oauthlib.flow import InstalledAppFlow
+
+    config = {
+        "installed": {
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": ["http://localhost:8080"],
+        }
+    }
+
+    flow = InstalledAppFlow.from_client_config(
+        config,
+        [
+            "https://www.googleapis.com/auth/youtube.upload",
+            "https://www.googleapis.com/auth/youtube",
+        ],
+    )
+    flow.redirect_uri = "http://localhost:8080"
+    url, _ = flow.authorization_url(prompt="consent", access_type="offline")
+
+    # Save PKCE state for later token exchange
+    state_path = CREDS / "oauth_state.json"
+    CREDS.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(json.dumps({
+        "code_verifier": flow.oauth2session._client.code_verifier,
+        "state": flow.oauth2session._client.state,
+    }))
+
+    print(url)
+
+
+def cmd_token(code: str) -> None:
+    from google_auth_oauthlib.flow import InstalledAppFlow
+
+    state_path = CREDS / "oauth_state.json"
+    if not state_path.exists():
+        print("ERROR: Run 'auth-youtube url' first to generate state")
+        sys.exit(1)
+
+    state = json.loads(state_path.read_text())
+
+    config = {
+        "installed": {
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": ["http://localhost:8080"],
+        }
+    }
+
+    flow = InstalledAppFlow.from_client_config(
+        config,
+        [
+            "https://www.googleapis.com/auth/youtube.upload",
+            "https://www.googleapis.com/auth/youtube",
+        ],
+    )
+    flow.redirect_uri = "http://localhost:8080"
+
+    # Restore PKCE state
+    flow.oauth2session._client.code_verifier = state["code_verifier"]
+    flow.oauth2session._client.state = state["state"]
+
+    # Handle full redirect URL or raw code
+    if code.startswith("http"):
+        parsed = urlparse(code)
+        params = parse_qs(parsed.query)
+        code = params.get("code", [None])[0]
+        if not code:
+            print("ERROR: No code parameter found in URL")
+            sys.exit(1)
+
+    flow.fetch_token(code=code)
+    TOKEN.write_text(flow.credentials.to_json())
+    state_path.unlink()
+
+    print("OK: Token saved to .credentials/youtube_token.json")
+    print(f"     Expires: {flow.credentials.expiry}")
+
+
+def cmd_status() -> None:
+    if not CLIENT_ID:
+        print("NOT CONFIGURED: YOUTUBE_CLIENT_ID not set")
+        sys.exit(1)
+
+    if TOKEN.exists():
+        from google.oauth2.credentials import Credentials as GCreds
+        creds = GCreds.from_authorized_user_info(
+            json.loads(TOKEN.read_text()),
+            ["https://www.googleapis.com/auth/youtube.upload"],
+        )
+        if creds.valid:
+            print(f"AUTHENTICATED: token valid until {creds.expiry}")
+        elif creds.expired and creds.refresh_token:
+            print("EXPIRED: token needs refresh (automatic)")
+        else:
+            print("INVALID: token expired, re-authenticate with 'auth-youtube url'")
+    else:
+        print("NOT AUTHENTICATED: run 'auth-youtube url' to start")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print(__doc__)
+        sys.exit(1)
+
+    cmd = sys.argv[1]
+    if cmd == "url":
+        cmd_url()
+    elif cmd == "token":
+        if len(sys.argv) < 3:
+            print("Usage: auth-youtube token <code-or-redirect-url>")
+            sys.exit(1)
+        cmd_token(sys.argv[2])
+    elif cmd == "status":
+        cmd_status()
+    else:
+        print(f"Unknown command: {cmd}")
+        print(__doc__)
+        sys.exit(1)
